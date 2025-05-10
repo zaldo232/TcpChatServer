@@ -10,15 +10,16 @@ public static class Database
     {
         using var conn = new SqlConnection(_connStr);
         conn.Execute("""
-            INSERT INTO ChatMessages (Sender, Type, Content, FileName, Timestamp)
-            VALUES (@Sender, @Type, @Content, @FileName, @Timestamp)
+            INSERT INTO ChatMessages (Sender, Receiver, Type, Content, FileName, Timestamp)
+            VALUES (@Sender, @Receiver, @Type, @Content, @FileName, @Timestamp)
         """, new
         {
             packet.Sender,
+            packet.Receiver,
             packet.Type,
             packet.Content,
             packet.FileName,
-            Timestamp = DateTime.Now
+            packet.Timestamp
         });
     }
 }

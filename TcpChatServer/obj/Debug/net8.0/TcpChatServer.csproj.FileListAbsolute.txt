@@ -63,3 +63,4 @@ C:\Users\zaldo\Documents\GitHub\TcpChatServer\TcpChatServer\bin\Debug\net8.0\run
 C:\Users\zaldo\Documents\GitHub\TcpChatServer\TcpChatServer\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
 C:\Users\zaldo\Documents\GitHub\TcpChatServer\TcpChatServer\obj\Debug\net8.0\TcpChatServer.csproj.AssemblyReference.cache
 C:\Users\zaldo\Documents\GitHub\TcpChatServer\TcpChatServer\obj\Debug\net8.0\TcpChatS.6B569FE4.Up2Date
+C:\Users\zaldo\Documents\GitHub\TcpChatServer\TcpChatServer\obj\Debug\net8.0\TcpChatServer.sourcelink.json

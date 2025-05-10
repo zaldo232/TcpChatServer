@@ -31,3 +31,5 @@ CREATE TABLE RoomMembers (
     RoomId INT,
     Username NVARCHAR(100)
 );
+
+ALTER TABLE ChatMessages ADD IsRead BIT DEFAULT 0;
