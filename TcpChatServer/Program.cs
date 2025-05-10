@@ -76,18 +76,42 @@ async Task HandleClientAsync(TcpClient client)
 
             Console.WriteLine($"[{packet.Sender} → {packet.Receiver ?? "전체"}] {packet.Type}: {packet.Content}");
 
-            // ✅ 파일 수신 시 저장 및 경로 유지
+            // 파일 수신 시 저장 및 경로 유지
             if (packet.Type == "file")
             {
                 string saveDir = Path.Combine("ChatFiles");
                 Directory.CreateDirectory(saveDir);
-                string path = Path.Combine(saveDir, packet.FileName);
-                File.WriteAllBytes(path, Convert.FromBase64String(packet.Content));
-                Console.WriteLine($"파일 저장됨: {path}");
 
-                packet.Content = path; // 경로 유지
-                Database.SaveChat(packet);
+                // 고유 파일명 생성
+                string newFileName = $"{Guid.NewGuid()}_{packet.FileName}";
+                string fullPath = Path.Combine(saveDir, newFileName);
+
+                try
+                {
+                    // Base64 → 파일 저장
+                    byte[] fileBytes = Convert.FromBase64String(packet.Content);
+                    File.WriteAllBytes(fullPath, fileBytes);
+
+                    // Content를 실제 경로로 바꿔서 DB + 클라에 전송
+                    packet.Content = fullPath;
+                    packet.FileName = newFileName;
+
+                    Database.SaveChat(packet);
+
+                    // 수신자에게 전송
+                    if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
+                    {
+                        await SendPacketTo(targetClient, packet);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[파일 저장 오류] {ex.Message}");
+                }
+
+                continue;
             }
+
             else
             {
                 Database.SaveChat(packet);
