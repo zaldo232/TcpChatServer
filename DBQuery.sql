@@ -33,3 +33,13 @@ CREATE TABLE RoomMembers (
 );
 
 ALTER TABLE ChatMessages ADD IsRead BIT DEFAULT 0;
+
+USE ChatServerDb;
+
+CREATE TABLE PinnedChats (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    Owner NVARCHAR(100) NOT NULL,
+    Target NVARCHAR(100) NOT NULL
+);
+
+CREATE UNIQUE INDEX UX_PinnedChats_OwnerTarget ON PinnedChats(Owner, Target);

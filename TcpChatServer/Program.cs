@@ -59,8 +59,8 @@ async Task HandleClientAsync(TcpClient client)
             if (packet.Type == "mark_read")
             {
                 MarkMessagesAsRead(packet.Sender, packet.Receiver);
-                await SendAllUsersPacket(packet.Sender);   // ✅ (N) 반영
-                await BroadcastUserList();                // ✅ 접속중 유저 반영
+                await SendAllUsersPacket(packet.Sender);
+                await BroadcastUserList();
                 continue;
             }
 
@@ -75,24 +75,29 @@ async Task HandleClientAsync(TcpClient client)
             }
 
             Console.WriteLine($"[{packet.Sender} → {packet.Receiver ?? "전체"}] {packet.Type}: {packet.Content}");
-            Database.SaveChat(packet);
 
+            // ✅ 파일 수신 시 저장 및 경로 유지
             if (packet.Type == "file")
             {
-                string saveDir = Path.Combine("ReceivedFiles");
+                string saveDir = Path.Combine("ChatFiles");
                 Directory.CreateDirectory(saveDir);
                 string path = Path.Combine(saveDir, packet.FileName);
                 File.WriteAllBytes(path, Convert.FromBase64String(packet.Content));
                 Console.WriteLine($"파일 저장됨: {path}");
+
+                packet.Content = path; // 경로 유지
+                Database.SaveChat(packet);
+            }
+            else
+            {
+                Database.SaveChat(packet);
             }
 
             if (!string.IsNullOrEmpty(packet.Receiver))
             {
                 if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
                 {
-                    var targetStream = targetClient.GetStream();
-                    byte[] data = Encoding.UTF8.GetBytes(json + "\n");
-                    await targetStream.WriteAsync(data, 0, data.Length);
+                    await SendPacketTo(targetClient, packet);
                 }
             }
             else
@@ -101,9 +106,7 @@ async Task HandleClientAsync(TcpClient client)
                 {
                     if (name != packet.Sender)
                     {
-                        var s = tcp.GetStream();
-                        byte[] data = Encoding.UTF8.GetBytes(json + "\n");
-                        await s.WriteAsync(data, 0, data.Length);
+                        await SendPacketTo(tcp, packet);
                     }
                 }
             }
@@ -157,10 +160,13 @@ async Task BroadcastUserList()
         Sender = "서버",
         Timestamp = DateTime.Now
     };
+    await BroadcastPacket(packet);
+}
+
+async Task BroadcastPacket(ChatPacket packet)
+{
     string json = JsonSerializer.Serialize(packet) + "\n";
     byte[] data = Encoding.UTF8.GetBytes(json);
-
-    Console.WriteLine($"[브로드캐스트] userlist → {userlist}");
 
     foreach (var (_, client) in connectedUsers)
     {
@@ -171,6 +177,14 @@ async Task BroadcastUserList()
         }
         catch { }
     }
+}
+
+async Task SendPacketTo(TcpClient client, ChatPacket packet)
+{
+    var stream = client.GetStream();
+    var json = JsonSerializer.Serialize(packet) + "\n";
+    byte[] data = Encoding.UTF8.GetBytes(json);
+    await stream.WriteAsync(data, 0, data.Length);
 }
 
 List<string> GetAllUsernamesFromDatabase()
@@ -201,14 +215,6 @@ void MarkMessagesAsRead(string receiver, string sender)
           SET IsRead = 1
           WHERE Receiver = @Receiver AND Sender = @Sender AND IsRead = 0",
         new { Receiver = receiver, Sender = sender });
-}
-
-async Task SendPacketTo(TcpClient client, ChatPacket packet)
-{
-    var stream = client.GetStream();
-    var json = JsonSerializer.Serialize(packet) + "\n";
-    byte[] data = Encoding.UTF8.GetBytes(json);
-    await stream.WriteAsync(data, 0, data.Length);
 }
 
 List<ChatPacket> GetChatHistory(string sender, string receiver)
