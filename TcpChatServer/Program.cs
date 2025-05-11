@@ -64,6 +64,36 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            if (packet.Type == "download")
+            {
+                try
+                {
+                    string path = packet.Content;
+                    byte[] data = File.ReadAllBytes(path);
+                    string base64 = Convert.ToBase64String(data);
+
+                    var response = new ChatPacket
+                    {
+                        Type = "download_result",
+                        Sender = "서버",
+                        Receiver = packet.Sender,
+                        Content = base64,
+                        FileName = packet.FileName,
+                        Timestamp = DateTime.Now
+                    };
+
+                    if (connectedUsers.TryGetValue(packet.Sender, out var targetClient))
+                    {
+                        await SendPacketTo(targetClient, response);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[다운로드 오류] {ex.Message}");
+                }
+                continue;
+            }
+
             if (username == null)
             {
                 username = packet.Sender;
@@ -74,31 +104,23 @@ async Task HandleClientAsync(TcpClient client)
                 await BroadcastUserList();
             }
 
-            Console.WriteLine($"[{packet.Sender} → {packet.Receiver ?? "전체"}] {packet.Type}: {packet.Content}");
-
-            // 파일 수신 시 저장 및 경로 유지
             if (packet.Type == "file")
             {
                 string saveDir = Path.Combine("ChatFiles");
                 Directory.CreateDirectory(saveDir);
 
-                // 고유 파일명 생성
                 string newFileName = $"{Guid.NewGuid()}_{packet.FileName}";
                 string fullPath = Path.Combine(saveDir, newFileName);
 
                 try
                 {
-                    // Base64 → 파일 저장
                     byte[] fileBytes = Convert.FromBase64String(packet.Content);
                     File.WriteAllBytes(fullPath, fileBytes);
 
-                    // Content를 실제 경로로 바꿔서 DB + 클라에 전송
                     packet.Content = fullPath;
                     packet.FileName = newFileName;
-
                     Database.SaveChat(packet);
 
-                    // 수신자에게 전송
                     if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
                     {
                         await SendPacketTo(targetClient, packet);
@@ -112,10 +134,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            else
-            {
-                Database.SaveChat(packet);
-            }
+            Database.SaveChat(packet);
 
             if (!string.IsNullOrEmpty(packet.Receiver))
             {
