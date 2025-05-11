@@ -53,8 +53,7 @@
               "RelativeToolTip": "TcpChatServer\\Database.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-08T17:07:10.71Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-08T17:07:10.71Z"
             },
             {
               "$type": "Document",
@@ -64,7 +63,7 @@
               "RelativeDocumentMoniker": "TcpChatServer\\ChatPacket.cs",
               "ToolTip": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\TcpChatServer\\ChatPacket.cs",
               "RelativeToolTip": "TcpChatServer\\ChatPacket.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAuwAgAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAA+wAgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-05-08T17:07:01.209Z",
               "EditorCaption": ""
@@ -79,8 +78,7 @@
               "RelativeToolTip": "TcpChatServer\\Program.cs",
               "ViewState": "AgIAAA8BAAAAAAAAAAAswBMBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-08T16:59:50.494Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-08T16:59:50.494Z"
             }
           ]
         }
