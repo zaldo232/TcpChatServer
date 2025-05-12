@@ -60,15 +60,15 @@ async Task HandleClientAsync(TcpClient client)
             {
                 MarkMessagesAsRead(packet.Sender, packet.Receiver);
 
-                //읽음 통보 패킷 보내기
+                // 읽음 통보 패킷 보내기
                 var notify = new ChatPacket
                 {
                     Type = "read_notify",
-                    Sender = packet.Receiver,    // 읽은 사람
-                    Receiver = packet.Sender     // 원래 보낸 사람
+                    Sender = packet.Sender,     // 읽은 사람
+                    Receiver = packet.Receiver  // 원래 보낸 사람
                 };
 
-                if (connectedUsers.TryGetValue(packet.Sender, out var targetClient))
+                if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))  // 이걸로 바꿔야 보낸 애한테 감
                 {
                     await SendPacketTo(targetClient, notify);
                 }
@@ -77,6 +77,7 @@ async Task HandleClientAsync(TcpClient client)
                 await BroadcastUserList();
                 continue;
             }
+
 
             if (packet.Type == "download")
             {
