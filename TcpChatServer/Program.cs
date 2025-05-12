@@ -59,6 +59,20 @@ async Task HandleClientAsync(TcpClient client)
             if (packet.Type == "mark_read")
             {
                 MarkMessagesAsRead(packet.Sender, packet.Receiver);
+
+                //읽음 통보 패킷 보내기
+                var notify = new ChatPacket
+                {
+                    Type = "read_notify",
+                    Sender = packet.Receiver,    // 읽은 사람
+                    Receiver = packet.Sender     // 원래 보낸 사람
+                };
+
+                if (connectedUsers.TryGetValue(packet.Sender, out var targetClient))
+                {
+                    await SendPacketTo(targetClient, notify);
+                }
+
                 await SendAllUsersPacket(packet.Sender);
                 await BroadcastUserList();
                 continue;
@@ -264,7 +278,7 @@ List<ChatPacket> GetChatHistory(string sender, string receiver)
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
     return conn.Query<ChatPacket>(
-        @"SELECT Sender, Receiver, Content, FileName, Type, Timestamp
+        @"SELECT Sender, Receiver, Content, FileName, Type, Timestamp, IsRead
           FROM ChatMessages
           WHERE (Sender = @A AND Receiver = @B) OR (Sender = @B AND Receiver = @A)
           ORDER BY Timestamp",

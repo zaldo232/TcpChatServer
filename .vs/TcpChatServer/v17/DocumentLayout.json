@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|c:\\users\\zaldo\\documents\\github\\tcpchatserver\\tcpchatserver\\database.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|solutionrelative:tcpchatserver\\database.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|c:\\users\\zaldo\\documents\\github\\tcpchatserver\\tcpchatserver\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|solutionrelative:tcpchatserver\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|c:\\users\\zaldo\\documents\\github\\tcpchatserver\\tcpchatserver\\database.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|solutionrelative:tcpchatserver\\database.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{7B61FE9A-4B99-4F84-B390-894E8AE08A03}|TcpChatServer\\TcpChatServer.csproj|c:\\users\\zaldo\\documents\\github\\tcpchatserver\\tcpchatserver\\chatpacket.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -25,7 +25,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -45,13 +45,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Database.cs",
               "DocumentMoniker": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\TcpChatServer\\Database.cs",
               "RelativeDocumentMoniker": "TcpChatServer\\Database.cs",
               "ToolTip": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\TcpChatServer\\Database.cs",
               "RelativeToolTip": "TcpChatServer\\Database.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-05-08T17:07:10.71Z",
               "EditorCaption": ""
@@ -64,21 +64,23 @@
               "RelativeDocumentMoniker": "TcpChatServer\\ChatPacket.cs",
               "ToolTip": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\TcpChatServer\\ChatPacket.cs",
               "RelativeToolTip": "TcpChatServer\\ChatPacket.cs",
-              "ViewState": "AgIAAAEAAAAAAAAAAAAkwAgAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAEAAAAAAAAAAAAkwAgAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-08T17:07:01.209Z"
+              "WhenOpened": "2025-05-08T17:07:01.209Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\TcpChatServer\\Program.cs",
               "RelativeDocumentMoniker": "TcpChatServer\\Program.cs",
               "ToolTip": "C:\\Users\\zaldo\\Documents\\GitHub\\TcpChatServer\\TcpChatServer\\Program.cs",
               "RelativeToolTip": "TcpChatServer\\Program.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAzwO8AAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAMBAAAAAAAAAAAcwB4BAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-08T16:59:50.494Z"
+              "WhenOpened": "2025-05-08T16:59:50.494Z",
+              "EditorCaption": ""
             }
           ]
         }

@@ -10,8 +10,8 @@ public static class Database
     {
         using var conn = new SqlConnection(_connStr);
         conn.Execute("""
-            INSERT INTO ChatMessages (Sender, Receiver, Type, Content, FileName, Timestamp)
-            VALUES (@Sender, @Receiver, @Type, @Content, @FileName, @Timestamp)
+            INSERT INTO ChatMessages (Sender, Receiver, Type, Content, FileName, Timestamp, IsRead)
+            VALUES (@Sender, @Receiver, @Type, @Content, @FileName, @Timestamp, 0)
         """, new
         {
             packet.Sender,
