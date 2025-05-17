@@ -78,7 +78,6 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-
             if (packet.Type == "download")
             {
                 try
@@ -129,17 +128,27 @@ async Task HandleClientAsync(TcpClient client)
 
                 try
                 {
+                    // 클라이언트가 보낸 Base64 디코드해서 파일로 저장
                     byte[] fileBytes = Convert.FromBase64String(packet.Content);
                     File.WriteAllBytes(fullPath, fileBytes);
 
-                    packet.Content = fullPath;
+                    // 서버에서 다시 읽어서 Base64로 변환해서 전송
+                    byte[] rawBytes = File.ReadAllBytes(fullPath);
+                    string base64 = Convert.ToBase64String(rawBytes);
+
+                    packet.Content = base64;
                     packet.FileName = newFileName;
+
                     Database.SaveChat(packet);
 
+                    // 상대방에게 전송
                     if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
-                    {
                         await SendPacketTo(targetClient, packet);
-                    }
+
+                    // 본인에게도 전송
+                    if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
+                        await SendPacketTo(senderClient, packet);
+
                 }
                 catch (Exception ex)
                 {
@@ -149,13 +158,72 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            Database.SaveChat(packet);
+
+            if (packet.Type == "delete")
+            {
+                try
+                {
+                    // 삭제 요청 처리
+                    using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
+                    conn.Execute("""
+                            UPDATE ChatMessages
+                            SET IsDeleted = 1, Content = '삭제된 메시지입니다'
+                            WHERE Id = @Id
+                        """, new { packet.Id });
+
+                    // 삭제한 사용자에겐 삭제 표시
+                    var toSender = new ChatPacket
+                    {
+                        Type = "delete_notify",
+                        Sender = packet.Sender,
+                        Receiver = packet.Receiver,
+                        Timestamp = packet.Timestamp,
+                        Content = "삭제된 메시지입니다",
+                        IsDeleted = true,
+                        Id = packet.Id
+                    };
+
+                    // 상대방에겐 내용은 그대로, IsDeleted = false
+                    var toReceiver = new ChatPacket
+                    {
+                        Type = "delete_notify",
+                        Sender = packet.Sender,
+                        Receiver = packet.Receiver,
+                        Timestamp = packet.Timestamp,
+                        Content = packet.Content,  // 원래 내용
+                        IsDeleted = false,
+                        Id = packet.Id
+                    };
+
+                    if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
+                        await SendPacketTo(senderClient, toSender);
+
+                    if (connectedUsers.TryGetValue(packet.Receiver, out var receiverClient))
+                        await SendPacketTo(receiverClient, toReceiver);
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[삭제 처리 오류] {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                }
+
+                continue;
+            }
+
+
+            packet.Id = Database.SaveChat(packet);
 
             if (!string.IsNullOrEmpty(packet.Receiver))
             {
                 if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
                 {
-                    await SendPacketTo(targetClient, packet);
+                    await SendPacketTo(targetClient, packet); // 상대방에게 보냄
+                }
+
+                if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
+                {
+                    await SendPacketTo(senderClient, packet); // 본인에게도 보냄 (내 화면에 뜨게!)
                 }
             }
             else
@@ -279,10 +347,10 @@ List<ChatPacket> GetChatHistory(string sender, string receiver)
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
     return conn.Query<ChatPacket>(
-        @"SELECT Sender, Receiver, Content, FileName, Type, Timestamp, IsRead
-          FROM ChatMessages
-          WHERE (Sender = @A AND Receiver = @B) OR (Sender = @B AND Receiver = @A)
-          ORDER BY Timestamp",
+        @"SELECT Sender, Receiver, Content, FileName, Type, Timestamp, IsRead, IsDeleted
+        FROM ChatMessages
+        WHERE (Sender = @A AND Receiver = @B) OR (Sender = @B AND Receiver = @A)
+        ORDER BY Timestamp",
         new { A = sender, B = receiver }
     ).ToList();
 }

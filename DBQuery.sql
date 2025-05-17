@@ -1,12 +1,13 @@
---  1. DB 생성
+-- 1. DB 생성
 CREATE DATABASE ChatServerDb;
 GO
 
---  2. 해당 DB로 이동
+-- 2. 해당 DB로 이동
 USE ChatServerDb;
 GO
 
--- 3. 테이블 생성
+-- 3. ChatMessages 테이블 생성 (수정됨)
+DROP TABLE IF EXISTS ChatMessages;
 CREATE TABLE ChatMessages (
     Id INT PRIMARY KEY IDENTITY(1,1),
     Sender NVARCHAR(100),
@@ -14,32 +15,15 @@ CREATE TABLE ChatMessages (
     Type NVARCHAR(20),
     Content NVARCHAR(MAX),
     FileName NVARCHAR(255),
-    Timestamp DATETIME DEFAULT GETDATE()
+    Timestamp DATETIME DEFAULT GETDATE(), -- ← 여기 쉼표 빠져있었음
+    IsRead BIT NOT NULL DEFAULT 0,
+    IsDeleted BIT NOT NULL DEFAULT 0
 );
+
+-- 4. Users 테이블 생성
+DROP TABLE IF EXISTS Users;
 CREATE TABLE Users (
     Id INT PRIMARY KEY IDENTITY(1,1),
     Username NVARCHAR(50) UNIQUE NOT NULL,
     Password NVARCHAR(100) NOT NULL
 );
-
-CREATE TABLE ChatRooms (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Name NVARCHAR(100)
-);
-
-CREATE TABLE RoomMembers (
-    RoomId INT,
-    Username NVARCHAR(100)
-);
-
-ALTER TABLE ChatMessages ADD IsRead BIT DEFAULT 0;
-
-USE ChatServerDb;
-
-CREATE TABLE PinnedChats (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Owner NVARCHAR(100) NOT NULL,
-    Target NVARCHAR(100) NOT NULL
-);
-
-CREATE UNIQUE INDEX UX_PinnedChats_OwnerTarget ON PinnedChats(Owner, Target);
