@@ -128,17 +128,27 @@ async Task HandleClientAsync(TcpClient client)
 
                 try
                 {
+                    // 클라이언트가 보낸 Base64 디코드해서 파일로 저장
                     byte[] fileBytes = Convert.FromBase64String(packet.Content);
                     File.WriteAllBytes(fullPath, fileBytes);
 
-                    packet.Content = fullPath;
+                    // 서버에서 다시 읽어서 Base64로 변환해서 전송
+                    byte[] rawBytes = File.ReadAllBytes(fullPath);
+                    string base64 = Convert.ToBase64String(rawBytes);
+
+                    packet.Content = base64;
                     packet.FileName = newFileName;
+
                     Database.SaveChat(packet);
 
+                    // 상대방에게 전송
                     if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
-                    {
                         await SendPacketTo(targetClient, packet);
-                    }
+
+                    // 본인에게도 전송
+                    if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
+                        await SendPacketTo(senderClient, packet);
+
                 }
                 catch (Exception ex)
                 {
@@ -147,6 +157,7 @@ async Task HandleClientAsync(TcpClient client)
 
                 continue;
             }
+
 
             if (packet.Type == "delete")
             {

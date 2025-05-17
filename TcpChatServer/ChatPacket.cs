@@ -26,3 +26,4 @@
         return HashCode.Combine(Sender, Receiver, Timestamp, FileName, Content, IsDeleted);
     }
 }
+    
