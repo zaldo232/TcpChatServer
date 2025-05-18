@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.SqlClient;
 using Dapper;
+using System.Diagnostics;
 
 Database.SaveChat(new ChatPacket { Type = "system", Sender = "서버", Content = "서버 시작됨" });
 
@@ -43,16 +44,70 @@ async Task HandleClientAsync(TcpClient client)
             var packet = JsonSerializer.Deserialize<ChatPacket>(json);
             if (packet == null) continue;
 
-            if (packet.Type == "get_history")
+            // 복호화 처리
+            if (packet.Type == "message" && !string.IsNullOrEmpty(packet.Content))
             {
-                var history = GetChatHistory(packet.Sender, packet.Receiver);
-                var historyPacket = new ChatPacket
+                string encryptedContent = packet.Content;
+                string decryptedContent;
+
+                try
                 {
-                    Type = "history",
-                    Sender = "서버",
-                    Content = JsonSerializer.Serialize(history)
+                    Debug.WriteLine($"[복호화 전 암호문] {encryptedContent}");
+                    decryptedContent = AesEncryption.Decrypt(encryptedContent);
+                    Debug.WriteLine($"[복호화 결과] {decryptedContent}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[복호화 실패] {ex.Message}");
+                    decryptedContent = "[복호화 실패]";
+                }
+
+                // 1. 암호문 상태 그대로 DB에 저장
+                var savePacket = new ChatPacket
+                {
+                    Type = packet.Type,
+                    Sender = packet.Sender,
+                    Receiver = packet.Receiver,
+                    Content = encryptedContent,
+                    FileName = packet.FileName,
+                    Timestamp = packet.Timestamp,
+                    IsRead = packet.IsRead,
+                    IsDeleted = packet.IsDeleted
                 };
-                await SendPacketTo(client, historyPacket);
+
+                savePacket.Id = Database.SaveChat(savePacket);
+
+                // 2. 클라이언트에게 보낼 때는 복호화된 내용을 보냄
+                var displayPacket = new ChatPacket
+                {
+                    Id = savePacket.Id,
+                    Type = savePacket.Type,
+                    Sender = savePacket.Sender,
+                    Receiver = savePacket.Receiver,
+                    Content = decryptedContent,
+                    FileName = savePacket.FileName,
+                    Timestamp = savePacket.Timestamp,
+                    IsRead = savePacket.IsRead,
+                    IsDeleted = savePacket.IsDeleted
+                };
+
+                if (!string.IsNullOrEmpty(displayPacket.Receiver))
+                {
+                    if (connectedUsers.TryGetValue(displayPacket.Receiver, out var targetClient))
+                        await SendPacketTo(targetClient, displayPacket);
+
+                    if (connectedUsers.TryGetValue(displayPacket.Sender, out var senderClient))
+                        await SendPacketTo(senderClient, displayPacket);
+                }
+                else
+                {
+                    foreach (var (name, tcp) in connectedUsers)
+                    {
+                        if (name != packet.Sender)
+                            await SendPacketTo(tcp, displayPacket);
+                    }
+                }
+
                 continue;
             }
 
@@ -155,6 +210,36 @@ async Task HandleClientAsync(TcpClient client)
                     Console.WriteLine($"[파일 저장 오류] {ex.Message}");
                 }
 
+                continue;
+            }
+
+            if (packet.Type == "get_history")
+            {
+                var history = GetChatHistory(packet.Sender, packet.Receiver);
+
+                foreach (var msg in history)
+                {
+                    if (msg.Type == "message" && !string.IsNullOrEmpty(msg.Content))
+                    {
+                        try
+                        {
+                            msg.Content = AesEncryption.Decrypt(msg.Content);
+                        }
+                        catch
+                        {
+                            msg.Content = "[복호화 실패]";
+                        }
+                    }
+                }
+
+                var historyPacket = new ChatPacket
+                {
+                    Type = "history",
+                    Sender = "서버",
+                    Content = JsonSerializer.Serialize(history)
+                };
+
+                await SendPacketTo(client, historyPacket);
                 continue;
             }
 
