@@ -44,6 +44,16 @@ async Task HandleClientAsync(TcpClient client)
             var packet = JsonSerializer.Deserialize<ChatPacket>(json);
             if (packet == null) continue;
 
+            // 타이핑 표시 처리
+            if (packet.Type == "typing")
+            {
+                if (!string.IsNullOrEmpty(packet.Receiver) && connectedUsers.TryGetValue(packet.Receiver, out var target))
+                {
+                    await SendPacketTo(target, packet);
+                }
+                continue;
+            }
+
             // 복호화 처리
             if (packet.Type == "message" && !string.IsNullOrEmpty(packet.Content))
             {
@@ -111,6 +121,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 읽음 처리
             if (packet.Type == "mark_read")
             {
                 MarkMessagesAsRead(packet.Sender, packet.Receiver);
@@ -133,6 +144,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 다운로드
             if (packet.Type == "download")
             {
                 try
@@ -163,16 +175,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            if (username == null)
-            {
-                username = packet.Sender;
-                connectedUsers[username] = client;
-                Console.WriteLine($"[접속] {username}");
-
-                await SendAllUsersPacket(username);
-                await BroadcastUserList();
-            }
-
+            // 파일 전송
             if (packet.Type == "file")
             {
                 string saveDir = Path.Combine("ChatFiles");
@@ -213,6 +216,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 예전 대화 내용 가져오기
             if (packet.Type == "get_history")
             {
                 var history = GetChatHistory(packet.Sender, packet.Receiver);
@@ -243,7 +247,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-
+            // 메세지 삭제
             if (packet.Type == "delete")
             {
                 try
@@ -296,6 +300,15 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            if (username == null)
+            {
+                username = packet.Sender;
+                connectedUsers[username] = client;
+                Console.WriteLine($"[접속] {username}");
+
+                await SendAllUsersPacket(username);
+                await BroadcastUserList();
+            }
 
             packet.Id = Database.SaveChat(packet);
 
