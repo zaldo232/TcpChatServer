@@ -44,6 +44,16 @@ async Task HandleClientAsync(TcpClient client)
             var packet = JsonSerializer.Deserialize<ChatPacket>(json);
             if (packet == null) continue;
 
+            // 타이핑 표시 처리
+            if (packet.Type == "typing")
+            {
+                if (!string.IsNullOrEmpty(packet.Receiver) && connectedUsers.TryGetValue(packet.Receiver, out var target))
+                {
+                    await SendPacketTo(target, packet);
+                }
+                continue;
+            }
+
             // 복호화 처리
             if (packet.Type == "message" && !string.IsNullOrEmpty(packet.Content))
             {
@@ -111,6 +121,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 읽음 처리
             if (packet.Type == "mark_read")
             {
                 MarkMessagesAsRead(packet.Sender, packet.Receiver);
@@ -133,13 +144,15 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 다운로드
             if (packet.Type == "download")
             {
                 try
                 {
                     string path = packet.Content;
                     byte[] data = File.ReadAllBytes(path);
-                    string base64 = Convert.ToBase64String(data);
+                    byte[] encrypted = AesEncryption.EncryptBytes(data);
+                    string base64 = Convert.ToBase64String(encrypted);
 
                     var response = new ChatPacket
                     {
@@ -163,16 +176,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            if (username == null)
-            {
-                username = packet.Sender;
-                connectedUsers[username] = client;
-                Console.WriteLine($"[접속] {username}");
-
-                await SendAllUsersPacket(username);
-                await BroadcastUserList();
-            }
-
+            // 파일 전송
             if (packet.Type == "file")
             {
                 string saveDir = Path.Combine("ChatFiles");
@@ -183,13 +187,16 @@ async Task HandleClientAsync(TcpClient client)
 
                 try
                 {
-                    // 클라이언트가 보낸 Base64 디코드해서 파일로 저장
-                    byte[] fileBytes = Convert.FromBase64String(packet.Content);
-                    File.WriteAllBytes(fullPath, fileBytes);
+                    // 복호화하여 저장
+                    byte[] encrypted = Convert.FromBase64String(packet.Content);
+                    byte[] decrypted = AesEncryption.DecryptBytes(encrypted);
+                    File.WriteAllBytes(fullPath, decrypted);
 
-                    // 서버에서 다시 읽어서 Base64로 변환해서 전송
+                    // 다시 읽어서 암호화 후 Base64로 전송
                     byte[] rawBytes = File.ReadAllBytes(fullPath);
-                    string base64 = Convert.ToBase64String(rawBytes);
+                    byte[] reEncrypted = AesEncryption.EncryptBytes(rawBytes);
+                    string base64 = Convert.ToBase64String(reEncrypted);
+
 
                     packet.Content = base64;
                     packet.FileName = newFileName;
@@ -213,6 +220,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 예전 대화 내용 가져오기
             if (packet.Type == "get_history")
             {
                 var history = GetChatHistory(packet.Sender, packet.Receiver);
@@ -243,7 +251,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-
+            // 메세지 삭제
             if (packet.Type == "delete")
             {
                 try
@@ -296,6 +304,15 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            if (username == null)
+            {
+                username = packet.Sender;
+                connectedUsers[username] = client;
+                Console.WriteLine($"[접속] {username}");
+
+                await SendAllUsersPacket(username);
+                await BroadcastUserList();
+            }
 
             packet.Id = Database.SaveChat(packet);
 
