@@ -45,4 +45,22 @@ public static class AesEncryption
         using var sr = new StreamReader(cs);
         return sr.ReadToEnd();
     }
+
+    public static byte[] EncryptBytes(byte[] data)
+    {
+        using var aes = Aes.Create();
+        aes.Key = Encoding.UTF8.GetBytes(Key);
+        aes.IV = Encoding.UTF8.GetBytes(IV);
+        using var encryptor = aes.CreateEncryptor();
+        return encryptor.TransformFinalBlock(data, 0, data.Length);
+    }
+
+    public static byte[] DecryptBytes(byte[] encryptedData)
+    {
+        using var aes = Aes.Create();
+        aes.Key = Encoding.UTF8.GetBytes(Key);
+        aes.IV = Encoding.UTF8.GetBytes(IV);
+        using var decryptor = aes.CreateDecryptor();
+        return decryptor.TransformFinalBlock(encryptedData, 0, encryptedData.Length);
+    }
 }

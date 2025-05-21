@@ -151,7 +151,8 @@ async Task HandleClientAsync(TcpClient client)
                 {
                     string path = packet.Content;
                     byte[] data = File.ReadAllBytes(path);
-                    string base64 = Convert.ToBase64String(data);
+                    byte[] encrypted = AesEncryption.EncryptBytes(data);
+                    string base64 = Convert.ToBase64String(encrypted);
 
                     var response = new ChatPacket
                     {
@@ -186,13 +187,16 @@ async Task HandleClientAsync(TcpClient client)
 
                 try
                 {
-                    // 클라이언트가 보낸 Base64 디코드해서 파일로 저장
-                    byte[] fileBytes = Convert.FromBase64String(packet.Content);
-                    File.WriteAllBytes(fullPath, fileBytes);
+                    // 복호화하여 저장
+                    byte[] encrypted = Convert.FromBase64String(packet.Content);
+                    byte[] decrypted = AesEncryption.DecryptBytes(encrypted);
+                    File.WriteAllBytes(fullPath, decrypted);
 
-                    // 서버에서 다시 읽어서 Base64로 변환해서 전송
+                    // 다시 읽어서 암호화 후 Base64로 전송
                     byte[] rawBytes = File.ReadAllBytes(fullPath);
-                    string base64 = Convert.ToBase64String(rawBytes);
+                    byte[] reEncrypted = AesEncryption.EncryptBytes(rawBytes);
+                    string base64 = Convert.ToBase64String(reEncrypted);
+
 
                     packet.Content = base64;
                     packet.FileName = newFileName;
