@@ -44,6 +44,19 @@ async Task HandleClientAsync(TcpClient client)
             var packet = JsonSerializer.Deserialize<ChatPacket>(json);
             if (packet == null) continue;
 
+            if (packet.Type == "ping")
+            {
+                await SendPacketTo(client, new ChatPacket
+                {
+                    Type = "pong",
+                    Sender = "서버",
+                    Receiver = packet.Sender,
+                    Timestamp = DateTime.Now
+                });
+                continue;
+            }
+
+
             // 타이핑 표시 처리
             if (packet.Type == "typing")
             {
