@@ -1,0 +1,36 @@
+# 빌드 결과물
+bin/
+obj/
+artifacts/
+
+# 사용자 설정
+*.user
+*.suo
+*.csproj.user
+*.sln.docstates
+
+# Visual Studio 작업 폴더
+.vs/
+
+# SQLite DB
+*.db
+*.sqlite
+*.sqlite3
+
+# 로그 및 임시파일
+*.log
+*.tmp
+*.temp
+
+# VS Code
+.vscode/
+
+# JetBrains Rider
+.idea/
+
+# 시스템 파일
+.DS_Store
+Thumbs.db
+
+# 퍼블리시 폴더
+publish/

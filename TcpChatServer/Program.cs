@@ -85,7 +85,7 @@ async Task HandleClientAsync(TcpClient client)
                     decryptedContent = "[복호화 실패]";
                 }
 
-                // 1. 암호문 상태 그대로 DB에 저장
+                // 암호문 상태 그대로 DB에 저장
                 var savePacket = new ChatPacket
                 {
                     Type = packet.Type,
@@ -100,7 +100,7 @@ async Task HandleClientAsync(TcpClient client)
 
                 savePacket.Id = Database.SaveChat(savePacket);
 
-                // 2. 클라이언트에게 보낼 때는 복호화된 내용을 보냄
+                // 클라이언트에게 보낼 때는 복호화된 내용을 보냄
                 var displayPacket = new ChatPacket
                 {
                     Id = savePacket.Id,
@@ -338,7 +338,7 @@ async Task HandleClientAsync(TcpClient client)
 
                 if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
                 {
-                    await SendPacketTo(senderClient, packet); // 본인에게도 보냄 (내 화면에 뜨게!)
+                    await SendPacketTo(senderClient, packet); // 본인에게도 보냄 (내 화면에 뜨게)
                 }
             }
             else
