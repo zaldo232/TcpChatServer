@@ -1,33 +1,34 @@
-﻿using System;
-using System.IO;
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Data.SqlClient;
-using Dapper;
-using System.Diagnostics;
 
+// 서버 시작 메시지 DB에 저장
 Database.SaveChat(new ChatPacket { Type = "system", Sender = "서버", Content = "서버 시작됨" });
 
+// TCP 리스너 생성 및 포트 9000에서 대기
 TcpListener listener = new TcpListener(IPAddress.Any, 9000);
 listener.Start();
 Console.WriteLine("서버 실행 중...");
 
+// 접속한 유저 목록 (닉네임, TcpClient) 관리
 ConcurrentDictionary<string, TcpClient> connectedUsers = new();
 
+// 클라이언트 연결 수신 루프 (비동기)
 _ = Task.Run(async () =>
 {
     while (true)
     {
-        var client = await listener.AcceptTcpClientAsync();
-        _ = HandleClientAsync(client);
+        var client = await listener.AcceptTcpClientAsync();   // 새 클라이언트 수신
+        _ = HandleClientAsync(client);                       // 처리 코루틴 시작
     }
 });
 
+// 클라이언트별 패킷 처리 메인 함수
 async Task HandleClientAsync(TcpClient client)
 {
     using var stream = client.GetStream();
@@ -38,13 +39,27 @@ async Task HandleClientAsync(TcpClient client)
     {
         while (true)
         {
+            // 클라이언트 패킷 수신
             string? json = await reader.ReadLineAsync();
             if (string.IsNullOrWhiteSpace(json)) break;
 
             var packet = JsonSerializer.Deserialize<ChatPacket>(json);
             if (packet == null) continue;
 
-            // 타이핑 표시 처리
+            // 핑/퐁 처리 (연결 유지)
+            if (packet.Type == "ping")
+            {
+                await SendPacketTo(client, new ChatPacket
+                {
+                    Type = "pong",
+                    Sender = "서버",
+                    Receiver = packet.Sender,
+                    Timestamp = DateTime.Now
+                });
+                continue;
+            }
+
+            // 타이핑 표시 전달
             if (packet.Type == "typing")
             {
                 if (!string.IsNullOrEmpty(packet.Receiver) && connectedUsers.TryGetValue(packet.Receiver, out var target))
@@ -54,7 +69,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            // 복호화 처리
+            // 암호화 메시지 복호화 및 저장/전달
             if (packet.Type == "message" && !string.IsNullOrEmpty(packet.Content))
             {
                 string encryptedContent = packet.Content;
@@ -72,7 +87,7 @@ async Task HandleClientAsync(TcpClient client)
                     decryptedContent = "[복호화 실패]";
                 }
 
-                // 1. 암호문 상태 그대로 DB에 저장
+                // 암호문 상태 그대로 DB에 저장
                 var savePacket = new ChatPacket
                 {
                     Type = packet.Type,
@@ -87,7 +102,7 @@ async Task HandleClientAsync(TcpClient client)
 
                 savePacket.Id = Database.SaveChat(savePacket);
 
-                // 2. 클라이언트에게 보낼 때는 복호화된 내용을 보냄
+                // 클라이언트에게 보낼 때는 복호화된 내용을 보냄
                 var displayPacket = new ChatPacket
                 {
                     Id = savePacket.Id,
@@ -101,32 +116,39 @@ async Task HandleClientAsync(TcpClient client)
                     IsDeleted = savePacket.IsDeleted
                 };
 
+                // 단일 or 전체 대상 전송
                 if (!string.IsNullOrEmpty(displayPacket.Receiver))
                 {
                     if (connectedUsers.TryGetValue(displayPacket.Receiver, out var targetClient))
-                        await SendPacketTo(targetClient, displayPacket);
+                    { 
+                        await SendPacketTo(targetClient, displayPacket); 
+                    }
 
                     if (connectedUsers.TryGetValue(displayPacket.Sender, out var senderClient))
-                        await SendPacketTo(senderClient, displayPacket);
+                    { 
+                        await SendPacketTo(senderClient, displayPacket); 
+                    }
                 }
                 else
                 {
                     foreach (var (name, tcp) in connectedUsers)
                     {
                         if (name != packet.Sender)
-                            await SendPacketTo(tcp, displayPacket);
+                        { 
+                            await SendPacketTo(tcp, displayPacket); 
+                        }
                     }
                 }
 
                 continue;
             }
 
-            // 읽음 처리
+            // 읽음 표시 처리
             if (packet.Type == "mark_read")
             {
-                MarkMessagesAsRead(packet.Sender, packet.Receiver);
+                MarkMessagesAsRead(packet.Sender, packet.Receiver); // DB 업데이트
 
-                // 읽음 통보 패킷 보내기
+                // 읽음 알림 패킷 생성
                 var notify = new ChatPacket
                 {
                     Type = "read_notify",
@@ -144,7 +166,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            // 다운로드
+            // 파일 다운로드 요청 처리
             if (packet.Type == "download")
             {
                 try
@@ -176,7 +198,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            // 파일 전송
+            // 파일 업로드/전송 처리
             if (packet.Type == "file")
             {
                 string saveDir = Path.Combine("ChatFiles");
@@ -205,11 +227,15 @@ async Task HandleClientAsync(TcpClient client)
 
                     // 상대방에게 전송
                     if (connectedUsers.TryGetValue(packet.Receiver, out var targetClient))
-                        await SendPacketTo(targetClient, packet);
+                    { 
+                        await SendPacketTo(targetClient, packet); 
+                    }
 
                     // 본인에게도 전송
                     if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
-                        await SendPacketTo(senderClient, packet);
+                    { 
+                        await SendPacketTo(senderClient, packet); 
+                    }
 
                 }
                 catch (Exception ex)
@@ -220,11 +246,12 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            // 예전 대화 내용 가져오기
+            // 대화 이력 요청 처리
             if (packet.Type == "get_history")
             {
                 var history = GetChatHistory(packet.Sender, packet.Receiver);
 
+                // 메시지 복호화 처리
                 foreach (var msg in history)
                 {
                     if (msg.Type == "message" && !string.IsNullOrEmpty(msg.Content))
@@ -251,7 +278,7 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
-            // 메세지 삭제
+            // 메시지 삭제 처리
             if (packet.Type == "delete")
             {
                 try
@@ -262,7 +289,7 @@ async Task HandleClientAsync(TcpClient client)
                             UPDATE ChatMessages
                             SET IsDeleted = 1, Content = '삭제된 메시지입니다'
                             WHERE Id = @Id
-                        """, new { packet.Id });
+                            """, new { packet.Id });
 
                     // 삭제한 사용자에겐 삭제 표시
                     var toSender = new ChatPacket
@@ -289,10 +316,14 @@ async Task HandleClientAsync(TcpClient client)
                     };
 
                     if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
-                        await SendPacketTo(senderClient, toSender);
+                    { 
+                        await SendPacketTo(senderClient, toSender); 
+                    }
 
                     if (connectedUsers.TryGetValue(packet.Receiver, out var receiverClient))
-                        await SendPacketTo(receiverClient, toReceiver);
+                    { 
+                        await SendPacketTo(receiverClient, toReceiver); 
+                    }
 
                 }
                 catch (Exception ex)
@@ -304,16 +335,18 @@ async Task HandleClientAsync(TcpClient client)
                 continue;
             }
 
+            // 최초 접속 처리
             if (username == null)
             {
                 username = packet.Sender;
                 connectedUsers[username] = client;
                 Console.WriteLine($"[접속] {username}");
 
-                await SendAllUsersPacket(username);
-                await BroadcastUserList();
+                await SendAllUsersPacket(username); // 내게만 전체유저 목록
+                await BroadcastUserList();         // 전체 유저에 리스트 전송
             }
 
+            // 그 외 메시지 DB 저장 및 전송
             packet.Id = Database.SaveChat(packet);
 
             if (!string.IsNullOrEmpty(packet.Receiver))
@@ -325,7 +358,7 @@ async Task HandleClientAsync(TcpClient client)
 
                 if (connectedUsers.TryGetValue(packet.Sender, out var senderClient))
                 {
-                    await SendPacketTo(senderClient, packet); // 본인에게도 보냄 (내 화면에 뜨게!)
+                    await SendPacketTo(senderClient, packet); // 본인에게도 보냄 (내 화면에 뜨게)
                 }
             }
             else
@@ -356,8 +389,10 @@ async Task HandleClientAsync(TcpClient client)
     }
 }
 
+// (아래부터는 서버에서 사용되는 헬퍼 함수들, 각 함수 위/내부 주석)
 async Task SendAllUsersPacket(string username)
 {
+    // 전체 유저리스트+안읽은 메시지 개수 반환
     var allUserList = GetAllUsernamesFromDatabase();
     var unreadCounts = GetUnreadMessageCounts(username);
 
@@ -378,6 +413,7 @@ async Task SendAllUsersPacket(string username)
     }
 }
 
+// 전체 접속자에게 유저리스트 브로드캐스트
 async Task BroadcastUserList()
 {
     var userlist = string.Join(",", connectedUsers.Keys);
@@ -391,6 +427,7 @@ async Task BroadcastUserList()
     await BroadcastPacket(packet);
 }
 
+// 패킷 전체 유저에게 브로드캐스트
 async Task BroadcastPacket(ChatPacket packet)
 {
     string json = JsonSerializer.Serialize(packet) + "\n";
@@ -407,6 +444,7 @@ async Task BroadcastPacket(ChatPacket packet)
     }
 }
 
+// 특정 클라이언트에 패킷 전송
 async Task SendPacketTo(TcpClient client, ChatPacket packet)
 {
     var stream = client.GetStream();
@@ -415,12 +453,14 @@ async Task SendPacketTo(TcpClient client, ChatPacket packet)
     await stream.WriteAsync(data, 0, data.Length);
 }
 
+// DB에서 모든 유저명 조회
 List<string> GetAllUsernamesFromDatabase()
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
     return conn.Query<string>("SELECT Username FROM Users").ToList();
 }
 
+// DB에서 안읽은 메시지 개수 조회
 Dictionary<string, int> GetUnreadMessageCounts(string receiver)
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
@@ -435,6 +475,7 @@ Dictionary<string, int> GetUnreadMessageCounts(string receiver)
     return result.ToDictionary(x => x.Sender, x => x.Count);
 }
 
+// 특정 송수신자 쌍의 메시지 전체 읽음 처리
 void MarkMessagesAsRead(string receiver, string sender)
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
@@ -445,6 +486,7 @@ void MarkMessagesAsRead(string receiver, string sender)
         new { Receiver = receiver, Sender = sender });
 }
 
+// 두 유저 간의 전체 채팅 내역 조회
 List<ChatPacket> GetChatHistory(string sender, string receiver)
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
@@ -457,4 +499,4 @@ List<ChatPacket> GetChatHistory(string sender, string receiver)
     ).ToList();
 }
 
-Console.ReadLine();
+Console.ReadLine(); // 서버 종료 방지
