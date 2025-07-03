@@ -73,3 +73,11 @@
 ---
 
 ## 아키텍처
+![아키텍쳐](Screenshots/ChatArchitecture.png)
+
+```planetext
+TcpChatServer/
+├─ Program.cs         # 서버 메인, TCPListener, 패킷 분기/처리
+├─ ChatPacket.cs      # 서버용 패킷 구조체 (클라와 동일 구조)
+├─ AesEncryption.cs   # 서버용 AES 암호화 유틸
+├─ Database.cs        # 서버 DB 저장/조회 (Dapper)
