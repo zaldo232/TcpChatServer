@@ -491,11 +491,11 @@ List<ChatPacket> GetChatHistory(string sender, string receiver)
 {
     using var conn = new SqlConnection("Server=localhost;Database=ChatServerDb;User Id=sa;Password=1234;TrustServerCertificate=True;");
     return conn.Query<ChatPacket>(
-        @"SELECT Sender, Receiver, Content, FileName, Type, Timestamp, IsRead, IsDeleted
-        FROM ChatMessages
-        WHERE (Sender = @A AND Receiver = @B) OR (Sender = @B AND Receiver = @A)
-        ORDER BY Timestamp",
-        new { A = sender, B = receiver }
+            @"SELECT Id, Sender, Receiver, Content, FileName, Type, Timestamp, IsRead, IsDeleted
+            FROM ChatMessages
+            WHERE (Sender = @A AND Receiver = @B) OR (Sender = @B AND Receiver = @A)
+            ORDER BY Timestamp",
+    new { A = sender, B = receiver }
     ).ToList();
 }
 
