@@ -1,16 +1,25 @@
-# TCP 채팅 시스템
+# TCP 채팅 서버
 
-## 프로젝트 명
-- **TCP 채팅 시스템 (TcpChatClient & TcpChatServer)**
-- WPF 데스크탑 클라이언트 + .NET 콘솔 서버 + MSSQL + AES 암호화
+## 프로젝트 개요
+
+- WPF MVVM 기반 데스크탑 클라이언트 + .NET 콘솔 서버 + MSSQL 연동 채팅 시스템
+- 실시간 채팅, 파일 전송, 회원가입/로그인, AES 대칭키 암호화 등 메신저 핵심 기능 구현
+- **클라이언트**: WPF(.NET 8, MVVM), TCP 통신, 메시지/파일 암호화, 실시간 UX
+- **서버**: .NET 콘솔앱, TCP 소켓 서버, DB 연동(MSSQL), 멀티 유저 처리 및 암호화 저장
 
 ---
 
-## 프로젝트 소개
-실시간 멀티 유저 채팅, 파일 전송, AES 암호화, 회원가입/로그인, 
-메시지/파일 관리 등 메신저의 핵심 기능을 설계/구현한 데스크탑 기반 채팅 프로젝트입니다.  
-- 클라이언트: WPF MVVM 패턴, 실시간 UX, 메시지/파일 암호화 전송, 드래그앤드롭 등
-- 서버: 멀티 유저 TCP 소켓, 메시지/파일 암호화 저장, DB 연동, 실시간 관리
+## 아키텍처
+![아키텍쳐](Screenshots/ChatArchitecture.png)
+
+### 전체 구조
+```planetext
+TcpChatServer/
+├─ Program.cs         # 서버 메인, TCPListener, 패킷 분기/처리
+├─ ChatPacket.cs      # 서버용 패킷 구조체 (클라와 동일 구조)
+├─ AesEncryption.cs   # 서버용 AES 암호화 유틸
+├─ Database.cs        # 서버 DB 저장/조회 (Dapper)
+```
 
 ---
 
@@ -71,13 +80,3 @@
 - **JsonSerializer (패킷 직렬화/역직렬화)**
 
 ---
-
-## 아키텍처
-![아키텍쳐](Screenshots/ChatArchitecture.png)
-
-```planetext
-TcpChatServer/
-├─ Program.cs         # 서버 메인, TCPListener, 패킷 분기/처리
-├─ ChatPacket.cs      # 서버용 패킷 구조체 (클라와 동일 구조)
-├─ AesEncryption.cs   # 서버용 AES 암호화 유틸
-├─ Database.cs        # 서버 DB 저장/조회 (Dapper)
